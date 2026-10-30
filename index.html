@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>테니스 작전판</title>
+<style>
+  :root{
+    --bg:#0e151d; --panel:#16202b; --panel2:#1c2836; --line:#2a3949;
+    --text:#e6edf3; --muted:#8b9bb0; --accent:#c6f135; --rec:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;font-size:14px}
+  body{display:flex;overflow:hidden}
+  #stage{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;padding:16px}
+  #board{border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.55);touch-action:none;display:block}
+  #side{width:360px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:16px 14px 40px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 4px;line-height:1.5}
+  .sec{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}
+  .sec h2{font-size:12px;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;font-weight:600}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .row + .row,.row + .field,.field + .field,.field + .row{margin-top:8px}
+  .grow{flex:1;min-width:0}
+  button{background:#283646;color:var(--text);border:1px solid #3a4b5e;border-radius:7px;padding:7px 10px;font:inherit;cursor:pointer;white-space:nowrap}
+  button:hover:not(:disabled){background:#33465a}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#16210a;border-color:transparent;font-weight:700}
+  button.primary:hover:not(:disabled){background:#d5ff4d}
+  button.rec{background:#3a1d22;border-color:#7a2d36;color:#ffb4b4;font-weight:700}
+  button.rec:hover:not(:disabled){background:#4d2229}
+  button.icon{padding:7px 9px}
+  kbd{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11px;padding:1px 5px;border-radius:4px;
+    background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);margin-left:4px;font-weight:600}
+  button.primary kbd{border-color:rgba(0,0,0,.25);background:rgba(0,0,0,.1)}
+  input[type=text],input[type=number],select,textarea{background:#0e151d;color:var(--text);border:1px solid #3a4b5e;
+    border-radius:7px;padding:6px 8px;font:inherit}
+  textarea{width:100%;resize:vertical;min-height:52px}
+  input:focus,select:focus,textarea:focus{outline:2px solid #5d7a2a;border-color:transparent}
+  label.chk{display:flex;gap:6px;align-items:center;cursor:pointer;color:#c9d4df}
+  .field label{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+  .seg{display:inline-flex;border:1px solid #3a4b5e;border-radius:7px;overflow:hidden}
+  .seg button{border:0;border-radius:0;background:transparent}
+  .seg button.on{background:var(--accent);color:#16210a;font-weight:700}
+  .names{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  .names div{display:flex;align-items:center;gap:6px}
+  .names input{width:100%;min-width:0}
+  .names input:disabled{opacity:.35}
+  .sw{width:12px;height:12px;border-radius:50%;flex-shrink:0;border:2px solid #fff}
+  .status{margin-top:10px;padding:7px 9px;border-radius:7px;background:#0e151d;color:var(--muted);font-size:12.5px;line-height:1.45}
+  .status.warn{color:#ffd56b;background:#2a2412}
+  #frames{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;margin-top:10px;padding-right:2px}
+  .fitem{display:flex;gap:9px;align-items:center;padding:6px;border-radius:8px;border:1px solid transparent;background:#131c26;cursor:pointer}
+  .fitem:hover{background:#1a2532}
+  .fitem.sel{border-color:var(--accent);background:#1f2c18}
+  .fitem canvas{width:42px;height:70px;border-radius:4px;flex-shrink:0}
+  .fitem .info{flex:1;min-width:0}
+  .fitem .meta{color:var(--muted);font-size:12px;margin-left:4px}
+  .fitem .memo{color:#c9d4df;font-size:12.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fitem .memo.empty{color:#5e6f82}
+  .fitem .x{background:transparent;border:0;color:#6d7f93;padding:4px 8px;font-size:16px}
+  .fitem .x:hover{color:#ff8a8a;background:transparent}
+  .empty-list{color:#5e6f82;text-align:center;padding:14px 0;font-size:13px}
+  #editor{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+  #editor .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #editor input,#editor select{width:100%}
+  .hint{color:#6d7f93;font-size:12px;margin:8px 0 0;line-height:1.5}
+  table.keys{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.keys td{padding:4px 0;color:#c9d4df}
+  table.keys td:first-child{width:110px;color:var(--muted)}
+  input[type=range]{accent-color:var(--accent)}
+  #recBadge{position:absolute;top:24px;left:24px;background:rgba(0,0,0,.6);color:#fff;padding:6px 12px;border-radius:20px;
+    font-weight:700;display:none;align-items:center;gap:8px}
+  #recBadge::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--rec);animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.2}}
+  #progress{position:absolute;left:0;bottom:0;height:4px;background:var(--accent);width:0;transition:none}
+  #toast{position:absolute;bottom:34px;left:50%;transform:translateX(-50%) translateY(10px);background:rgba(10,15,20,.92);
+    border:1px solid #3a4b5e;color:#fff;padding:9px 16px;border-radius:20px;opacity:0;transition:.2s;pointer-events:none;white-space:nowrap}
+  #toast.show{opacity:1;transform:translateX(-50%)}
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:10}
+  #modal.open{display:flex}
+  #modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;max-height:94vh;display:flex;flex-direction:column;gap:12px}
+  #modal h3{margin:0;font-size:16px}
+  #modal video{max-height:calc(94vh - 120px);max-width:80vw;border-radius:8px;background:#000}
+  #modal a.btn{background:var(--accent);color:#16210a;font-weight:700;text-decoration:none;border-radius:7px;padding:7px 12px}
+</style>
+</head>
+<body>
+<main id="stage">
+  <canvas id="board" width="1280" height="900"></canvas>
+  <div id="recBadge">REC 녹화 중…</div>
+  <div id="progress"></div>
+  <div id="toast"></div>
+</main>
+
+<aside id="side">
+  <h1>🎾 테니스 작전판</h1>
+  <p class="sub">선수와 공을 드래그해서 배치하고 <kbd>Space</kbd>로 장면을 저장하세요. 저장된 장면들이 이어져 하나의 플레이가 됩니다.</p>
+
+  <section class="sec">
+    <h2>코트 설정</h2>
+    <div class="row">
+      <div class="seg" id="modeSeg">
+        <button data-v="singles">단식</button><button data-v="doubles">복식</button>
+      </div>
+      <select id="surface" class="grow">
+        <option value="hard">하드 코트</option>
+        <option value="clay">클레이 코트</option>
+        <option value="grass">잔디 코트</option>
+      </select>
+    </div>
+    <div class="names" id="names"></div>
+    <div class="row">
+      <label class="chk grow"><input type="checkbox" id="showPaths" checked> 전체 이동 경로 표시</label>
+      <button id="resetBtn">위치 초기화</button>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>장면 (프레임)</h2>
+    <div class="row"><button class="primary grow" id="addBtn">＋ 현재 장면 저장 <kbd>Space</kbd></button></div>
+    <div class="row">
+      <button id="overBtn" class="grow">덮어쓰기 <kbd>U</kbd></button>
+      <button id="delBtn" class="grow">삭제 <kbd>Del</kbd></button>
+      <button id="undoBtn" class="icon" title="실행 취소 (Ctrl+Z)">↶</button>
+      <button id="redoBtn" class="icon" title="다시 실행 (Ctrl+Y)">↷</button>
+    </div>
+    <div id="status" class="status"></div>
+    <div id="frames"></div>
+    <div id="editor">
+      <div class="field">
+        <label>장면 메모 (영상 상단에 표시)</label>
+        <textarea id="memo" placeholder="예) 서브 와이드 → 발리 준비"></textarea>
+      </div>
+      <div class="two field">
+        <div>
+          <label id="durLabel">이전 장면에서 이동 시간(초)</label>
+          <input type="number" id="dur" min="0.1" max="10" step="0.1">
+        </div>
+        <div>
+          <label>공 궤적</label>
+          <select id="arc"></select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>재생 · 영상</h2>
+    <div class="row"><button class="primary grow" id="playBtn">▶ 처음부터 재생 <kbd>Enter</kbd></button></div>
+    <div class="row">
+      <span style="color:var(--muted)">속도</span>
+      <input type="range" id="speed" class="grow" min="0.25" max="2" step="0.25" value="1">
+      <span id="speedVal" style="width:38px;text-align:right">1.0x</span>
+    </div>
+    <div class="row">
+      <button class="rec grow" id="recBtn">● 영상으로 저장 <kbd>R</kbd></button>
+      <button id="viewBtn" disabled>최근 영상 보기</button>
+    </div>
+    <div class="row"><label class="chk"><input type="checkbox" id="autoDl" checked> 녹화가 끝나면 자동으로 다운로드</label></div>
+    <p class="hint">녹화는 처음 장면부터 마지막 장면까지 재생하면서 진행됩니다. 녹화 중에는 이 탭을 띄워 두세요.</p>
+  </section>
+
+  <section class="sec">
+    <h2>작전 저장 / 불러오기</h2>
+    <div class="row">
+      <input type="text" id="projName" class="grow" placeholder="작전 이름" maxlength="40">
+      <button id="saveBtn">저장</button>
+    </div>
+    <div class="row">
+      <select id="saveList" class="grow"></select>
+      <button id="loadBtn">불러오기</button>
+      <button id="delSaveBtn">삭제</button>
+    </div>
+    <div class="row">
+      <button id="exportBtn" class="grow">파일로 내보내기</button>
+      <button id="importBtn" class="grow">파일 가져오기</button>
+      <button id="newBtn">새 작전</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <p class="hint">작업 중인 내용은 브라우저에 자동 저장됩니다. 다른 기기로 옮길 땐 "파일로 내보내기"를 쓰세요.</p>
+  </section>
+
+  <section class="sec">
+    <h2>단축키</h2>
+    <table class="keys">
+      <tr><td><kbd>Space</kbd></td><td>현재 배치를 새 장면으로 저장</td></tr>
+      <tr><td><kbd>U</kbd></td><td>선택한 장면 덮어쓰기</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>이전 / 다음 장면</td></tr>
+      <tr><td><kbd>Del</kbd></td><td>선택한 장면 삭제</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>재생 / 정지</td></tr>
+      <tr><td><kbd>R</kbd></td><td>영상으로 녹화</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>재생·녹화 중지</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td><td>실행 취소 / 다시 실행</td></tr>
+    </table>
+  </section>
+</aside>
+
+<div id="modal">
+  <div class="box">
+    <h3>🎬 최종 플레이</h3>
+    <video id="video" controls loop playsinline></video>
+    <div class="row">
+      <a class="btn" id="dlLink" href="#">영상 다운로드</a>
+      <span class="grow"></span>
+      <button id="closeModal">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- 상수 ----------
+const W = 1280, H = 900;                    // 캔버스 픽셀 (영상 해상도)
+const LIM = { x: 9.2, y: 15 };              // 드래그 가능 범위(m)
+const SKIN = '#e9b48c';
+const HL = 11.885, HWD = 5.485, HWS = 4.115, SVC = 6.40; // 코트 규격(m)
+const IDS = ['A1', 'A2', 'B1', 'B2'];
+const TEAM = {
+  A: { fill: '#2563eb', dark: '#1e2f6b', path: 'rgba(110,170,255,.65)' },
+  B: { fill: '#dc2626', dark: '#6b1d1d', path: 'rgba(255,125,125,.65)' },
+};
+const ARCS = [
+  { name: '드라이브(낮게)', k: 0.05, max: 0.8 },
+  { name: '보통',           k: 0.10, max: 2.5 },
+  { name: '로브(높게)',     k: 0.28, max: 7 },
+  { name: '공 이동 없음/굴림', k: 0, max: 0 },
+];
+const SURF = {
+  hard:  { out: '#3b7c5c', in: '#2d5d9a', wall: '#173a2c' },
+  clay:  { out: '#a9533a', in: '#c4673f', wall: '#22402c' },
+  grass: { out: '#3a7434', in: '#4a8f43', wall: '#163a22', stripe: true },
+};
+const FONT = '"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+const LS_AUTO = 'tennisBoard.autosave', LS_SAVES = 'tennisBoard.saves';
+
+// ---------- 상태 ----------
+const defaultPos = mode => mode === 'singles'
+  ? { A1: [0.6, 12.4], A2: [-2.6, 4.2], B1: [-0.6, -12.4], B2: [2.6, -4.2], ball: [1.4, 11.6] }
+  : { A1: [1.6, 12.4], A2: [-2.6, 4.2], B1: [-4.0, -12.2], B2: [2.6, -6.6], ball: [2.4, 11.6] };
+const newProject = () => ({
+  name: '새 작전', mode: 'doubles', surface: 'hard',
+  names: { A1: 'A1', A2: 'A2', B1: 'B1', B2: 'B2' }, frames: [],
+});
+
+let project = newProject();
+let stage = defaultPos('doubles');   // 현재 화면 위 배치
+let cur = -1;                        // 선택된 장면 인덱스
+let showPaths = true, speed = 1;
+let playing = null, drag = null, lastVideo = null, recording = false;
+let history = [], future = [];
+
+const clone = o => JSON.parse(JSON.stringify(o));
+const F = () => project.frames;
+const visibleIds = () => project.mode === 'singles' ? ['A1', 'B1'] : IDS;
+const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const $ = id => document.getElementById(id);
+
+// ---------- DOM ----------
+const canvas = $('board'), ctx = canvas.getContext('2d');
+
+// ---------- 실행 취소 ----------
+const snap = () => JSON.stringify({ project, stage, cur });
+function pushHistory() { history.push(snap()); if (history.length > 150) history.shift(); future = []; }
+function restore(s) { const o = JSON.parse(s); project = o.project; stage = o.stage; cur = o.cur; refreshAll(); }
+function undo() { if (playing || !history.length) return; future.push(snap()); restore(history.pop()); toast('실행 취소'); }
+function redo() { if (playing || !future.length) return; history.push(snap()); restore(future.pop()); toast('다시 실행'); }
+
+// ---------- 장면 조작 ----------
+function isDirty() {
+  if (cur < 0 || !F()[cur]) return false;
+  const p = F()[cur].pos;
+  return [...IDS, 'ball'].some(id => dist(p[id], stage[id]) > 0.01);
+}
+function addFrame() {
+  if (playing) return;
+  pushHistory();
+  const prev = F()[cur];
+  F().splice(cur + 1, 0, { pos: clone(stage), dur: prev ? prev.dur : 1, arc: prev ? prev.arc : 1, memo: '' });
+  cur++;
+  refreshAll();
+  toast(`장면 #${cur + 1} 저장됨`);
+}
+function overwriteFrame() {
+  if (playing || cur < 0) return;
+  pushHistory();
+  F()[cur].pos = clone(stage);
+  refreshAll();
+  toast(`장면 #${cur + 1} 덮어씀`);
+}
+function deleteFrame(i = cur) {
+  if (playing || i < 0 || !F()[i]) return;
+  pushHistory();
+  F().splice(i, 1);
+  if (i < cur || cur >= F().length) cur--;
+  if (cur >= 0) stage = clone(F()[cur].pos);
+  refreshAll();
+  toast('장면 삭제됨');
+}
+function selectFrame(i) {
+  if (i < 0 || i >= F().length) return;
+  if (playing) stopPlay();
+  if (isDirty()) pushHistory();
+  cur = i;
+  stage = clone(F()[i].pos);
+  refreshAll();
+}
+
+// ---------- 2.5D 카메라 ----------
+const TAU = Math.PI * 2;
+const CAM = { C: [0, 21, 11], T: [0, -2, 0] };
+const Rv = [1, 0, 0];
+let Fv, Uv, FOC = 1, OX = 0, OY = 0;
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+// 월드(m) → 화면(px). 반환: [x, y, 1m당 픽셀]
+function proj(x, y, z = 0) {
+  const v = [x - CAM.C[0], y - CAM.C[1], z - CAM.C[2]];
+  const cz = dot(v, Fv);
+  return [OX + FOC * dot(v, Rv) / cz, OY - FOC * dot(v, Uv) / cz, FOC / cz];
+}
+// 화면(px) → 지면(z=0) 좌표
+function screenToGround(sx, sy) {
+  const a = (sx - OX) / FOC, b = -(sy - OY) / FOC;
+  const d = [0, 1, 2].map(i => Fv[i] + a * Rv[i] + b * Uv[i]);
+  if (d[2] > -1e-4) return null;
+  const t = -CAM.C[2] / d[2];
+  return [CAM.C[0] + t * d[0], CAM.C[1] + t * d[1]];
+}
+function setupCamera() {
+  const d = CAM.T.map((v, i) => v - CAM.C[i]), n = Math.hypot(...d);
+  Fv = d.map(v => v / n);
+  Uv = [0, Fv[2], -Fv[1]];
+  FOC = 1; OX = 0; OY = 0;
+  // 코트 + 좌우 여유, 뒤쪽 벽, 앞쪽 베이스라인 뒤 공간이 화면에 꽉 차도록 맞춤
+  const pts = [[-7.2, -17, 2.6], [7.2, -17, 2.6], [-7, 14.6, 0], [7, 14.6, 0]];
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const p of pts) {
+    const [sx, sy] = proj(...p);
+    x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+  }
+  const top = 40, bottom = 10;
+  FOC = Math.min((W - 40) / (x1 - x0), (H - top - bottom) / (y1 - y0));
+  OX = W / 2 - FOC * (x0 + x1) / 2;
+  OY = top + (H - top - bottom - FOC * (y1 - y0)) / 2 - FOC * y0;
+}
+
+// ---------- 그리기 기본 ----------
+function line(c, x1, y1, x2, y2) { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
+function gline(c, x1, y1, x2, y2, z = 0) { const a = proj(x1, y1, z), b = proj(x2, y2, z); line(c, a[0], a[1], b[0], b[1]); }
+function poly(c, pts) {
+  c.beginPath();
+  pts.forEach((p, i) => { const [x, y] = proj(...p); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+  c.closePath();
+}
+function rr(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+
+function drawCourt(c) {
+  const s = SURF[project.surface] || SURF.hard;
+  const g = c.createLinearGradient(0, 0, 0, H * 0.4);
+  g.addColorStop(0, '#0a1622'); g.addColorStop(1, '#14283a');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // 바닥 & 뒷벽
+  c.fillStyle = s.out; poly(c, [[-40, -17, 0], [40, -17, 0], [40, 23, 0], [-40, 23, 0]]); c.fill();
+  c.fillStyle = s.wall; poly(c, [[-40, -17, 0], [40, -17, 0], [40, -17, 3.2], [-40, -17, 3.2]]); c.fill();
+  c.fillStyle = 'rgba(0,0,0,.25)'; poly(c, [[-40, -17, 2.6], [40, -17, 2.6], [40, -17, 3.2], [-40, -17, 3.2]]); c.fill();
+  // 코트 안쪽
+  c.fillStyle = s.in; poly(c, [[-HWD, -HL, 0], [HWD, -HL, 0], [HWD, HL, 0], [-HWD, HL, 0]]); c.fill();
+  if (s.stripe) {
+    c.fillStyle = 'rgba(255,255,255,.05)';
+    for (let y = -17; y < 23; y += 4) { poly(c, [[-40, y, 0], [40, y, 0], [40, y + 2, 0], [-40, y + 2, 0]]); c.fill(); }
+  }
+  c.strokeStyle = '#fff'; c.lineWidth = 3; c.setLineDash([]); c.lineCap = 'butt';
+  poly(c, [[-HWD, -HL, 0], [HWD, -HL, 0], [HWD, HL, 0], [-HWD, HL, 0]]); c.stroke();
+  gline(c, -HWS, -HL, -HWS, HL); gline(c, HWS, -HL, HWS, HL);
+  gline(c, -HWS, -SVC, HWS, -SVC); gline(c, -HWS, SVC, HWS, SVC);
+  gline(c, 0, -SVC, 0, SVC);
+  gline(c, 0, -HL, 0, -HL + 0.3); gline(c, 0, HL, 0, HL - 0.3);
+}
+
+function drawNet(c) {
+  const nx = HWD + 0.914, topZ = x => 0.914 + (1.07 - 0.914) * Math.abs(x) / nx;
+  c.fillStyle = 'rgba(12,12,12,.42)';
+  poly(c, [[-nx, 0, 0], [nx, 0, 0], [nx, 0, 1.07], [0, 0, 0.914], [-nx, 0, 1.07]]); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.13)'; c.lineWidth = 1;
+  for (let x = -nx; x <= nx; x += 0.3) { const a = proj(x, 0, 0), b = proj(x, 0, topZ(x)); line(c, a[0], a[1], b[0], b[1]); }
+  for (let z = 0.15; z < 0.9; z += 0.15) gline(c, -nx, 0, nx, 0, z);
+  c.strokeStyle = '#f2f2f2'; c.lineWidth = 2.5; { const a = proj(0, 0, 0), b = proj(0, 0, 0.914); line(c, a[0], a[1], b[0], b[1]); }
+  c.lineWidth = 4.5; c.lineJoin = 'round';
+  c.beginPath();
+  [[-nx, 1.07], [0, 0.914], [nx, 1.07]].forEach(([x, z], i) => { const [sx, sy] = proj(x, 0, z); i ? c.lineTo(sx, sy) : c.moveTo(sx, sy); });
+  c.stroke();
+  c.strokeStyle = '#cfd4d8'; c.lineWidth = 6;
+  for (const x of [-nx, nx]) { const a = proj(x, 0, 0), b = proj(x, 0, 1.12); line(c, a[0], a[1], b[0], b[1]); }
+}
+
+// ---------- 공 ----------
+function drawBallShadow(c, b, z) {
+  const [x, y, k] = proj(b[0], b[1], 0), f = 1 - Math.min(z, 5) * 0.08;
+  const r = Math.max(3, 0.15 * k) * f;
+  c.beginPath(); c.ellipse(x, y, r, r * 0.42, 0, 0, TAU);
+  c.fillStyle = `rgba(0,0,0,${0.38 - Math.min(z, 5) * 0.05})`; c.fill();
+}
+function drawBall(c, b, z) {
+  const [x, y, k] = proj(b[0], b[1], z), r = Math.max(5, 0.13 * k);
+  const g = c.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r);
+  g.addColorStop(0, '#f6ff9a'); g.addColorStop(1, '#bcd61c');
+  c.beginPath(); c.arc(x, y, r, 0, TAU);
+  c.fillStyle = g; c.fill(); c.lineWidth = 1.2; c.strokeStyle = 'rgba(60,70,0,.6)'; c.stroke();
+  c.beginPath(); c.arc(x - r * 1.1, y, r * .85, -0.9, 0.9);
+  c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.3; c.stroke();
+}
+function ballHeightMax(a, b, arcIdx) {
+  const arc = ARCS[arcIdx] || ARCS[1];
+  return Math.min(dist(a, b) * arc.k, arc.max);
+}
+const ballZ = (za, zb, hm, u) => za + (zb - za) * u + 4 * hm * u * (1 - u);
+
+// ---------- 타구 판정 ----------
+// 공에서 2m 안의 가장 가까운 선수가 그 장면의 타자. 위치·상황으로 스트로크 종류를 정함.
+function strokeFor(pos, isFirst, arc) {
+  let pid = null, bd = 2.0;
+  for (const id of visibleIds()) { const d = dist(pos[id], pos.ball); if (d < bd) { bd = d; pid = id; } }
+  if (!pid) return null;
+  const rs = pid[0] === 'A' ? 1 : -1;        // 오른손잡이: A는 뒷모습(화면 오른쪽), B는 앞모습(화면 왼쪽)
+  const ay = Math.abs(pos[pid][1]);
+  const type = isFirst && ay > 10.5 ? 'serve' : (arc === 2 && ay < 8) ? 'smash' : ay < 4.8 ? 'volley' : 'ground';
+  const dx = pos.ball[0] - pos[pid][0];
+  const s = (type === 'serve' || type === 'smash' || Math.abs(dx) < 0.15) ? rs : Math.sign(dx);
+  return { pid, type, s, rs, bh: s !== rs };
+}
+const CONTACT_Z = { serve: 2.45, smash: 2.5, volley: 1.15, ground: 0.9 };
+const contactZ = st => st ? CONTACT_Z[st.type] : 0.04;   // 타자가 없으면 바운드(지면)
+function frameInfo() {
+  return F().map((f, i) => { const st = strokeFor(f.pos, i === 0, i ? f.arc : 1); return { st, z: contactZ(st) }; });
+}
+function editStroke() {
+  const n = F().length, first = n === 0 || (cur === 0 && !isDirty());
+  return strokeFor(stage, first, cur >= 0 ? F()[cur].arc : 1);
+}
+
+// ---------- 선수 애니메이션 ----------
+const READY = rs => [rs * 0.35, rs * 2.75, -rs * 0.4];
+// [진행도, 라켓팔 각도, 라켓 각도, 반대팔 각도]  (0=아래, +π/2=화면 오른쪽, π=위)
+const SWINGS = {
+  ground: { pre: .38, post: .32, keys: (s, rs) => [[0, ...READY(rs)], [.3, s * 1.9, s * 2.5, -s * .6], [.6, s * 1.15, s * 1.6, -s * .9], [1, -s * 2.4, -s * 2.9, -s * .3], [1.4, ...READY(rs)]] },
+  volley: { pre: .2, post: .2, keys: (s, rs) => [[0, ...READY(rs)], [.3, s * 1.4, s * 2.4, -s * .7], [.6, s * 1.25, s * 1.95, -s * .7], [1, s * .95, s * 1.8, -s * .5], [1.4, ...READY(rs)]] },
+  serve:  { pre: 1.1, post: .45, keys: (s, rs) => [[0, ...READY(rs)], [.25, rs * 1.0, rs * .4, -rs * 2.9], [.45, rs * 2.3, rs * .2, -rs * 2.9], [.6, rs * 3.0, rs * 3.1, -rs * 1.0], [1, -rs * .9, -rs * .6, -rs * .3], [1.4, ...READY(rs)]] },
+  smash:  { pre: .55, post: .38, keys: (s, rs) => [[0, ...READY(rs)], [.35, rs * 2.3, rs * .3, -rs * 2.8], [.6, rs * 3.0, rs * 3.1, -rs * 1.2], [1, -rs * .8, -rs * .5, -rs * .3], [1.4, ...READY(rs)]] },
+};
+const smooth = t => t * t * (3 - 2 * t);
+const anim = {};
+function updateAnim(pos, dt) {
+  for (const id of IDS) {
+    const a = anim[id] || (anim[id] = { p: [...pos[id]], phase: 0, run: 0, lat: 0.5, dir: 1 });
+    const d = dist(a.p, pos[id]);
+    if (d > 2 || dt <= 0) { a.p = [...pos[id]]; continue; }      // 순간 이동(장면 선택 등)은 달리기로 치지 않음
+    const target = Math.min(1, d / dt / 2.6);
+    a.run += (target - a.run) * Math.min(1, dt * 9);
+    a.phase += d * 2.4;
+    if (d > 1e-4) {
+      const dx = pos[id][0] - a.p[0];
+      a.lat += (Math.abs(dx) / d - a.lat) * Math.min(1, dt * 8);
+      if (Math.abs(dx) > 1e-4) a.dir = Math.sign(dx);
+    }
+    a.p = [...pos[id]];
+  }
+}
+function basePose(id) {
+  const a = anim[id] || { run: 0, phase: 0, lat: .5, dir: 1 }, rs = id[0] === 'A' ? 1 : -1, sn = Math.sin(a.phase);
+  return {
+    rs, run: a.run, phase: a.phase, lat: a.lat, dir: a.dir,
+    lean: a.dir * 0.07 * a.run * a.lat, crouch: 0.07 * (1 - a.run),
+    a: rs * (0.35 + sn * 0.3 * a.run), r: rs * (2.75 - sn * 0.25 * a.run), o: -rs * (0.4 - sn * 0.45 * a.run), join: false,
+  };
+}
+const idlePose = id => { const rs = id[0] === 'A' ? 1 : -1; return { rs, run: 0, phase: 0, lat: .5, dir: 1, lean: 0, crouch: .07, a: rs * .35, r: rs * 2.75, o: -rs * .4, join: false }; };
+function applySwing(pose, ev, p) {
+  const keys = SWINGS[ev.type].keys(ev.s, ev.rs);
+  p = Math.max(0, Math.min(1.4, p));
+  let i = 0;
+  while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
+  const A = keys[i], B = keys[i + 1], t = smooth((p - A[0]) / (B[0] - A[0]));
+  pose.a = A[1] + (B[1] - A[1]) * t;
+  pose.r = A[2] + (B[2] - A[2]) * t;
+  pose.o = A[3] + (B[3] - A[3]) * t;
+  pose.lean += ev.s * 0.06 * Math.sin(Math.min(1, p) * Math.PI);
+  pose.crouch = Math.max(pose.crouch, 0.09 * Math.sin(Math.min(1, p) * Math.PI));
+  pose.join = ev.bh && p > 0.12 && p < 0.85;
+}
+function swingAt(id, t) {
+  let best = null;
+  for (const ev of playing.events) {
+    if (ev.pid !== id) continue;
+    const cfg = SWINGS[ev.type], dt = t - ev.tc;
+    if (dt < -cfg.pre || dt > cfg.post * 2) continue;
+    if (!best || Math.abs(dt) < Math.abs(best.dt)) best = { ev, dt, p: dt < 0 ? 0.6 * (1 + dt / cfg.pre) : 0.6 + 0.4 * dt / cfg.post };
+  }
+  return best;
+}
+
+// ---------- 선수 그리기 ----------
+function drawPlayerShadow(c, pos) {
+  const [x, y, k] = proj(pos[0], pos[1], 0);
+  c.beginPath(); c.ellipse(x + 0.1 * k, y, 0.42 * k, 0.17 * k, 0, 0, TAU);
+  c.fillStyle = 'rgba(0,0,0,.3)'; c.fill();
+}
+function drawFigure(c, id, pos, pose, alpha = 1, label = true) {
+  const [fx, fy, k] = proj(pos[0], pos[1], 0);
+  const pt = (lx, ly) => [fx + lx * k, fy - ly * k];
+  const team = TEAM[id[0]], back = id[0] === 'A';
+  const { run, phase: ph, rs } = pose;
+  c.save(); c.globalAlpha = alpha; c.lineCap = 'round'; c.lineJoin = 'round';
+  const bob = Math.abs(Math.sin(ph)) * 0.05 * run;
+  const hipY = 0.92 - pose.crouch + bob, L = pose.lean;
+  const shY = hipY + 0.52, sx = L * 1.6;
+
+  // 다리
+  for (const i of [-1, 1]) {
+    const off = i > 0 ? 0 : Math.PI;
+    const sw = Math.sin(ph + off), lift = Math.max(0, Math.cos(ph + off)) * 0.22 * run;
+    const footX = i * (0.17 + 0.06 * (1 - run)) + sw * 0.32 * run * (0.35 + pose.lat) + L * 0.4;
+    const hip = pt(i * 0.09 + L * 0.6, hipY);
+    const knee = pt((i * 0.09 + footX) / 2 + i * 0.05 + pose.crouch * i * 0.5 + pose.dir * 0.07 * run * pose.lat, (hipY + lift) / 2 + lift * 0.45);
+    const foot = pt(footX, lift);
+    c.strokeStyle = SKIN; c.lineWidth = 0.11 * k;
+    c.beginPath(); c.moveTo(...hip); c.lineTo(...knee); c.lineTo(...foot); c.stroke();
+    c.fillStyle = '#f4f4f4';
+    c.beginPath(); c.ellipse(foot[0] + i * 0.03 * k, foot[1] - 0.03 * k, 0.09 * k, 0.05 * k, 0, 0, TAU); c.fill();
+  }
+  // 반바지
+  c.fillStyle = team.dark;
+  c.beginPath();
+  [[-0.17 + L * .6, hipY + 0.08], [0.17 + L * .6, hipY + 0.08], [0.21 + L * .6, hipY - 0.22], [-0.21 + L * .6, hipY - 0.22]]
+    .forEach(([x, y], i) => i ? c.lineTo(...pt(x, y)) : c.moveTo(...pt(x, y)));
+  c.closePath(); c.fill();
+  // 상체
+  c.fillStyle = team.fill;
+  c.beginPath();
+  [[-0.21 + sx, shY + 0.02], [0.21 + sx, shY + 0.02], [0.17 + L * .6, hipY + 0.04], [-0.17 + L * .6, hipY + 0.04]]
+    .forEach(([x, y], i) => i ? c.lineTo(...pt(x, y)) : c.moveTo(...pt(x, y)));
+  c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = Math.max(1, 0.025 * k); c.stroke();
+
+  const rSh = [rs * 0.2 + sx, shY - 0.03], oSh = [-rs * 0.2 + sx, shY - 0.03];
+  const hand = [rSh[0] + Math.sin(pose.a) * 0.6, rSh[1] - Math.cos(pose.a) * 0.6];
+  const oHand = pose.join ? [hand[0] - rs * 0.04, hand[1] - 0.06] : [oSh[0] + Math.sin(pose.o) * 0.55, oSh[1] - Math.cos(pose.o) * 0.55];
+  const arm = (sh, h) => {
+    const el = [(sh[0] + h[0]) / 2, (sh[1] + h[1]) / 2 - 0.03];
+    c.strokeStyle = SKIN; c.lineWidth = 0.075 * k;
+    c.beginPath(); c.moveTo(...pt(...sh)); c.lineTo(...pt(...el)); c.lineTo(...pt(...h)); c.stroke();
+  };
+  arm(oSh, oHand);
+  // 머리
+  const hc = pt(sx * 1.05, shY + 0.2), hr = 0.12 * k;
+  c.fillStyle = SKIN; c.beginPath(); c.arc(hc[0], hc[1], hr, 0, TAU); c.fill();
+  c.fillStyle = '#2b1d14';
+  if (back) { c.beginPath(); c.arc(hc[0], hc[1] - hr * 0.08, hr * 1.02, 0, TAU); c.fill(); }
+  else {
+    c.beginPath(); c.arc(hc[0], hc[1] - hr * 0.1, hr * 1.04, Math.PI * 1.05, Math.PI * 1.95); c.fill();
+    if (k > 30) { c.beginPath(); c.arc(hc[0] - hr * .38, hc[1] + hr * .1, hr * .11, 0, TAU); c.arc(hc[0] + hr * .38, hc[1] + hr * .1, hr * .11, 0, TAU); c.fill(); }
+  }
+  // 헤드밴드(팀 색)
+  c.strokeStyle = team.fill; c.lineWidth = Math.max(1.5, 0.035 * k);
+  c.beginPath(); c.arc(hc[0], hc[1] - hr * 0.1, hr * 1.02, Math.PI * 1.1, Math.PI * 1.9); c.stroke();
+  // 라켓 팔 + 라켓
+  arm(rSh, hand);
+  const dir = [Math.sin(pose.r), -Math.cos(pose.r)];
+  const grip = pt(hand[0] + dir[0] * 0.24, hand[1] + dir[1] * 0.24), hp = pt(...hand);
+  c.strokeStyle = '#222'; c.lineWidth = Math.max(1.5, 0.035 * k);
+  c.beginPath(); c.moveTo(...hp); c.lineTo(...grip); c.stroke();
+  const hcx = pt(hand[0] + dir[0] * 0.44, hand[1] + dir[1] * 0.44), rot = Math.atan2(-dir[1], dir[0]);
+  c.beginPath(); c.ellipse(hcx[0], hcx[1], 0.17 * k, 0.12 * k, rot, 0, TAU);
+  c.fillStyle = 'rgba(255,255,255,.28)'; c.fill();
+  c.strokeStyle = '#1b1b1b'; c.lineWidth = Math.max(1.5, 0.04 * k); c.stroke();
+  c.fillStyle = SKIN; c.beginPath(); c.arc(hp[0], hp[1], 0.045 * k, 0, TAU); c.fill();
+  // 이름표
+  if (label) {
+    const name = project.names[id] || id, fs = Math.max(11, Math.min(18, 0.3 * k));
+    c.font = `700 ${fs}px ${FONT}`;
+    const tw = c.measureText(name).width, [tx, ty] = pt(sx, shY + 0.52);
+    rr(c, tx - tw / 2 - 6, ty - fs * 0.75, tw + 12, fs * 1.5, fs * 0.6);
+    c.fillStyle = team.fill; c.fill(); c.lineWidth = 1.5; c.strokeStyle = 'rgba(255,255,255,.8)'; c.stroke();
+    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(name, tx, ty + 1);
+  }
+  c.restore();
+}
+// 클릭 판정용 선수 영역
+function figureBox(pos) {
+  const [x, y, k] = proj(pos[0], pos[1], 0);
+  return [x - 0.5 * k, y - 2.2 * k, x + 0.5 * k, y + 0.15 * k];
+}
+
+// ---------- 보조 표시 ----------
+function arrow(c, x1, y1, x2, y2, color, shrink) {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  if (L < shrink * 2 + 8) return;
+  const ux = dx / L, uy = dy / L;
+  const sx = x1 + ux * shrink, sy = y1 + uy * shrink, ex = x2 - ux * shrink, ey = y2 - uy * shrink;
+  c.save();
+  c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 3.5; c.setLineDash([10, 8]);
+  line(c, sx, sy, ex - ux * 10, ey - uy * 10);
+  c.setLineDash([]);
+  c.beginPath(); c.moveTo(ex, ey);
+  c.lineTo(ex - ux * 16 - uy * 9, ey - uy * 16 + ux * 9);
+  c.lineTo(ex - ux * 16 + uy * 9, ey - uy * 16 - ux * 9);
+  c.closePath(); c.fill();
+  c.restore();
+}
+function drawPaths(c, info) {
+  const fr = F();
+  if (fr.length < 2) return;
+  c.save();
+  c.lineWidth = 3; c.setLineDash([9, 9]);
+  for (const id of visibleIds()) {
+    c.strokeStyle = TEAM[id[0]].path; c.beginPath();
+    fr.forEach((f, i) => { const [x, y] = proj(...f.pos[id], 0); i ? c.lineTo(x, y) : c.moveTo(x, y); });
+    c.stroke();
+  }
+  c.strokeStyle = 'rgba(232,255,90,.8)'; c.setLineDash([5, 7]);
+  for (let i = 1; i < fr.length; i++) {
+    const A = fr[i - 1].pos.ball, B = fr[i].pos.ball, hm = ballHeightMax(A, B, fr[i].arc);
+    c.beginPath();
+    for (let j = 0; j <= 24; j++) {
+      const u = j / 24, p = lerp(A, B, u), [x, y] = proj(p[0], p[1], ballZ(info[i - 1].z, info[i].z, hm, u));
+      j ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.stroke();
+  }
+  c.setLineDash([]);
+  c.font = `700 13px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  fr.forEach((f, i) => {
+    const [x, y] = proj(f.pos.ball[0], f.pos.ball[1], info[i].z);
+    c.beginPath(); c.arc(x + 15, y - 15, 10, 0, TAU);
+    c.fillStyle = 'rgba(20,28,10,.85)'; c.fill();
+    c.fillStyle = '#e8ff5a'; c.fillText(i + 1, x + 15, y - 14);
+  });
+  c.restore();
+}
+function drawTrail(c, trail) {
+  c.save(); c.lineCap = 'round';
+  for (let i = 1; i < trail.length; i++) {
+    const t = i / trail.length;
+    c.strokeStyle = `rgba(235,255,100,${t * .6})`; c.lineWidth = 6 * t;
+    line(c, trail[i - 1][0], trail[i - 1][1], trail[i][0], trail[i][1]);
+  }
+  c.restore();
+}
+function fitText(c, text, maxW) {
+  if (c.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length && c.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+function drawCaption(c, title, memo) {
+  c.save();
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `700 26px ${FONT}`;
+  const tw = c.measureText(title).width;
+  let mw = 0;
+  if (memo) { c.font = `500 22px ${FONT}`; memo = fitText(c, memo, W - 160); mw = c.measureText(memo).width; }
+  const bw = Math.max(tw, mw) + 44, bh = memo ? 82 : 48;
+  rr(c, W / 2 - bw / 2, 16, bw, bh, 12);
+  c.fillStyle = 'rgba(8,12,16,.75)'; c.fill();
+  c.font = `700 26px ${FONT}`; c.fillStyle = '#e8ff5a'; c.fillText(title, W / 2, 40);
+  if (memo) { c.font = `500 22px ${FONT}`; c.fillStyle = '#fff'; c.fillText(memo, W / 2, 74); }
+  c.restore();
+}
+
+// ---------- 장면 그리기 ----------
+// o: { z: 공 높이, poses, ghost, ghostZ, paths, info, trail, caption }
+function drawScene(c, pos, o = {}) {
+  drawCourt(c);
+  if (o.paths) drawPaths(c, o.info || frameInfo());
+  const ids = visibleIds(), items = [];
+  if (o.ghost) {
+    for (const id of [...ids, 'ball']) {
+      if (dist(o.ghost[id], pos[id]) < 0.15) continue;
+      const a = proj(...o.ghost[id], 0), b = proj(...pos[id], 0);
+      arrow(c, a[0], a[1], b[0], b[1], id === 'ball' ? 'rgba(232,255,90,.95)' : 'rgba(255,255,255,.85)', id === 'ball' ? 8 : 0.3 * b[2]);
+      items.push(id === 'ball'
+        ? { y: o.ghost.ball[1], draw: () => { c.save(); c.globalAlpha = .35; drawBall(c, o.ghost.ball, o.ghostZ || 0); c.restore(); } }
+        : { y: o.ghost[id][1], draw: () => drawFigure(c, id, o.ghost[id], idlePose(id), .3, false) });
+    }
+  }
+  for (const id of ids) drawPlayerShadow(c, pos[id]);
+  drawBallShadow(c, pos.ball, o.z || 0);
+  if (o.trail) drawTrail(c, o.trail);
+  for (const id of ids) items.push({ y: pos[id][1], draw: () => drawFigure(c, id, pos[id], o.poses?.[id] || idlePose(id)) });
+  items.push({ y: pos.ball[1] + 0.01, draw: () => drawBall(c, pos.ball, o.z || 0) });
+  items.sort((a, b) => a.y - b.y);
+  let netDone = false;
+  for (const it of items) {
+    if (!netDone && it.y >= 0) { drawNet(c); netDone = true; }
+    it.draw();
+  }
+  if (!netDone) drawNet(c);
+  if (o.caption) drawCaption(c, o.caption[0], o.caption[1]);
+}
+
+// 장면 목록용 위에서 본 썸네일
+function drawThumb(c, pos) {
+  const s = SURF[project.surface] || SURF.hard, k = 84 / 18, T = (x, y) => [42 + x * k, 70 + y * k];
+  c.fillStyle = s.out; c.fillRect(0, 0, 84, 140);
+  const [x0, y0] = T(-HWD, -HL), [x1, y1] = T(HWD, HL);
+  c.fillStyle = s.in; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+  c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 1;
+  c.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  const l = (a, b, cc, d) => { const p = T(a, b), q = T(cc, d); line(c, p[0], p[1], q[0], q[1]); };
+  l(-HWS, -HL, -HWS, HL); l(HWS, -HL, HWS, HL); l(-HWS, -SVC, HWS, -SVC); l(-HWS, SVC, HWS, SVC); l(0, -SVC, 0, SVC);
+  c.strokeStyle = '#111'; c.lineWidth = 2; l(-HWD - 0.9, 0, HWD + 0.9, 0);
+  for (const id of visibleIds()) { const [x, y] = T(...pos[id]); c.beginPath(); c.arc(x, y, 3.6, 0, TAU); c.fillStyle = TEAM[id[0]].fill; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1; c.stroke(); }
+  const [bx, by] = T(...pos.ball); c.beginPath(); c.arc(bx, by, 2.6, 0, TAU); c.fillStyle = '#e4ff3a'; c.fill();
+}
+
+function editCaption() {
+  const n = F().length;
+  if (!n) return ['선수·공을 드래그 → Space로 장면 저장', ''];
+  if (cur < 0) return [`장면 ${n}개`, ''];
+  return [`장면 ${cur + 1} / ${n}${isDirty() ? '  · 수정 중' : ''}`, F()[cur].memo];
+}
+
+// ---------- 재생 ----------
+function startPlay(opts = {}) {
+  const fr = F();
+  if (fr.length < 2) { toast('재생하려면 장면이 2개 이상 필요합니다'); return false; }
+  const info = frameInfo();
+  const segs = [{ from: 0, to: 0, d: info[0].st?.type === 'serve' ? 1.5 : 0.8 }];
+  for (let i = 1; i < fr.length; i++) segs.push({ from: i - 1, to: i, d: Math.max(0.1, +fr[i].dur || 1) / speed });
+  segs.push({ from: fr.length - 1, to: fr.length - 1, d: 1.4 });
+  // 각 장면에 공이 도착하는 시각 = 타구 시각
+  const events = [];
+  let tc = 0;
+  for (let i = 0; i < fr.length; i++) {
+    tc += segs[i].d;
+    if (info[i].st) events.push({ ...info[i].st, tc });
+  }
+  playing = {
+    segs, info, events, total: segs.reduce((s, x) => s + x.d, 0), t0: performance.now(), trail: [],
+    onEnd: opts.onEnd, onCancel: opts.onCancel, prev: { stage: clone(stage), cur },
+  };
+  updatePlayUI();
+  return true;
+}
+function evalPlay(now) {
+  const p = playing, fr = F(), info = p.info, t = (now - p.t0) / 1000, last = fr.length - 1;
+  if (t >= p.total) return { pos: fr[last].pos, z: info[last].z, idx: last, t, prog: 1, done: true };
+  let acc = 0;
+  for (let si = 0; si < p.segs.length; si++) {
+    const s = p.segs[si];
+    if (t < acc + s.d) {
+      const u = (t - acc) / s.d, A = fr[s.from].pos, B = fr[s.to].pos;
+      if (s.from === s.to) {
+        let z = info[s.to].z;
+        if (si === 0 && info[0].st?.type === 'serve') {       // 서브 토스
+          const w = Math.max(0, (u - 0.15) / 0.85);
+          z = u < 0.15 ? 1.0 : 3.1 - 4.97 * (w - 0.65) ** 2;
+        }
+        return { pos: A, z, idx: s.to, t, prog: t / p.total };
+      }
+      const e = ease(u), pos = {};
+      for (const id of IDS) pos[id] = lerp(A[id], B[id], e);
+      pos.ball = lerp(A.ball, B.ball, u);
+      const z = ballZ(info[s.from].z, info[s.to].z, ballHeightMax(A.ball, B.ball, fr[s.to].arc), u);
+      return { pos, z, idx: s.to, t, prog: t / p.total };
+    }
+    acc += s.d;
+  }
+}
+function finishPlay() {
+  const p = playing; playing = null;
+  cur = F().length - 1; stage = clone(F()[cur].pos);
+  refreshAll(); updatePlayUI();
+  p.onEnd && p.onEnd();
+}
+function stopPlay() {
+  if (!playing) return;
+  const p = playing; playing = null;
+  stage = p.prev.stage; cur = p.prev.cur;
+  refreshAll(); updatePlayUI();
+  p.onCancel && p.onCancel();
+}
+function togglePlay() { playing ? stopPlay() : startPlay(); }
+
+function updatePlayUI() {
+  $('playBtn').innerHTML = playing ? '■ 정지 <kbd>Enter</kbd>' : '▶ 처음부터 재생 <kbd>Enter</kbd>';
+  $('recBtn').disabled = !!playing;
+  $('recBadge').style.display = recording ? 'flex' : 'none';
+  if (!playing) $('progress').style.width = '0';
+  for (const id of ['addBtn', 'overBtn', 'delBtn', 'undoBtn', 'redoBtn']) $(id).disabled = !!playing;
+  if (!playing) renderStatus();
+}
+
+// ---------- 녹화 ----------
+function pickMime() {
+  const list = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+  return list.find(m => MediaRecorder.isTypeSupported(m)) || '';
+}
+function record() {
+  if (playing) return;
+  if (F().length < 2) { toast('녹화하려면 장면이 2개 이상 필요합니다'); return; }
+  if (!window.MediaRecorder || !canvas.captureStream) {
+    alert('이 브라우저는 영상 녹화를 지원하지 않습니다. Chrome 또는 Edge를 사용해 주세요.'); return;
+  }
+  const mime = pickMime();
+  const stream = canvas.captureStream(60);
+  const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : {});
+  const chunks = [];
+  let cancelled = false;
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    recording = false; updatePlayUI();
+    if (cancelled) { toast('녹화 취소됨'); return; }
+    const type = rec.mimeType || mime || 'video/webm';
+    setVideo(new Blob(chunks, { type }), type);
+    openVideo();
+  };
+  recording = true;
+  rec.start(100);
+  startPlay({
+    onEnd: () => rec.stop(),
+    onCancel: () => { cancelled = true; rec.stop(); },
+  });
+}
+function stamp() {
+  const d = new Date(), z = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`;
+}
+const safeName = s => (s || '작전').replace(/[\\/:*?"<>|]+/g, '_').trim() || '작전';
+function download(url, name) {
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function setVideo(blob, type) {
+  if (lastVideo) URL.revokeObjectURL(lastVideo.url);
+  const ext = type.includes('mp4') ? 'mp4' : 'webm';
+  lastVideo = { url: URL.createObjectURL(blob), name: `${safeName(project.name)}_${stamp()}.${ext}` };
+  $('viewBtn').disabled = false;
+  if ($('autoDl').checked) { download(lastVideo.url, lastVideo.name); toast(`영상 저장됨: ${lastVideo.name}`); }
+}
+function openVideo() {
+  if (!lastVideo) return;
+  const v = $('video');
+  v.src = lastVideo.url;
+  $('dlLink').href = lastVideo.url; $('dlLink').download = lastVideo.name;
+  $('modal').classList.add('open');
+  v.play().catch(() => {});
+}
+function closeVideo() { $('video').pause(); $('modal').classList.remove('open'); }
+
+// ---------- UI 렌더 ----------
+function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+
+function renderFrames() {
+  const box = $('frames');
+  box.innerHTML = '';
+  if (!F().length) { box.innerHTML = '<div class="empty-list">저장된 장면이 없습니다</div>'; return; }
+  F().forEach((f, i) => {
+    const it = document.createElement('div');
+    it.className = 'fitem' + (i === cur ? ' sel' : '');
+    const th = document.createElement('canvas');
+    th.width = 84; th.height = 140;
+    const tc = th.getContext('2d');
+    drawThumb(tc, f.pos);
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML = `<b>#${i + 1}</b><span class="meta">${i ? `${(+f.dur).toFixed(1)}초 · ${ARCS[f.arc].name}` : '시작 장면'}</span>
+      <div class="memo ${f.memo ? '' : 'empty'}">${f.memo ? esc(f.memo) : '메모 없음'}</div>`;
+    const x = document.createElement('button');
+    x.className = 'x'; x.textContent = '✕'; x.title = '삭제';
+    x.onclick = e => { e.stopPropagation(); deleteFrame(i); };
+    it.append(th, info, x);
+    it.onclick = () => selectFrame(i);
+    box.appendChild(it);
+    if (i === cur) requestAnimationFrame(() => it.scrollIntoView({ block: 'nearest' }));
+  });
+}
+
+function renderEditor() {
+  const ed = $('editor'), f = F()[cur];
+  ed.style.display = f ? '' : 'none';
+  if (!f) return;
+  if (document.activeElement !== $('memo')) $('memo').value = f.memo;
+  $('dur').value = f.dur; $('arc').value = f.arc;
+  $('dur').disabled = $('arc').disabled = cur === 0;
+  $('durLabel').textContent = cur === 0 ? '시작 장면 (이동 없음)' : '이전 장면에서 이동 시간(초)';
+}
+
+function renderStatus() {
+  const st = $('status'), n = F().length;
+  st.classList.remove('warn');
+  if (!n) st.textContent = '선수와 공을 원하는 위치로 옮긴 뒤 Space를 눌러 첫 장면을 저장하세요.';
+  else if (isDirty()) {
+    st.classList.add('warn');
+    st.textContent = `장면 #${cur + 1}에서 위치가 바뀌었습니다 — Space: 다음 장면으로 저장 / U: #${cur + 1} 덮어쓰기`;
+  } else st.textContent = cur >= 0 ? `장면 #${cur + 1} / 총 ${n}개 — 선수와 공을 옮긴 뒤 Space로 다음 장면 저장` : `총 ${n}개 장면`;
+  $('overBtn').disabled = cur < 0 || !!playing;
+  $('delBtn').disabled = cur < 0 || !!playing;
+  $('undoBtn').disabled = !history.length || !!playing;
+  $('redoBtn').disabled = !future.length || !!playing;
+}
+
+function renderSettings() {
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === project.mode));
+  $('surface').value = project.surface;
+  if (document.activeElement !== $('projName')) $('projName').value = project.name;
+  const vis = visibleIds();
+  IDS.forEach(id => {
+    const inp = $('name-' + id);
+    if (document.activeElement !== inp) inp.value = project.names[id];
+    inp.disabled = !vis.includes(id);
+  });
+}
+
+function refreshAll() {
+  renderSettings(); renderFrames(); renderEditor(); renderStatus(); autosave();
+}
+
+// ---------- 저장 ----------
+function normalize(p) {
+  const d = newProject();
+  const o = Object.assign(d, p || {});
+  o.names = Object.assign(newProject().names, o.names || {});
+  if (!['singles', 'doubles'].includes(o.mode)) o.mode = 'doubles';
+  if (!SURF[o.surface]) o.surface = 'hard';
+  const def = defaultPos(o.mode);
+  o.frames = (Array.isArray(o.frames) ? o.frames : []).map(f => ({
+    pos: Object.fromEntries([...IDS, 'ball'].map(id => [id, Array.isArray(f.pos?.[id]) ? f.pos[id].map(Number) : def[id]])),
+    dur: Math.min(10, Math.max(0.1, +f.dur || 1)),
+    arc: ARCS[f.arc] ? +f.arc : 1,
+    memo: String(f.memo || ''),
+  }));
+  return o;
+}
+function autosave() {
+  try { localStorage.setItem(LS_AUTO, JSON.stringify({ project, stage, cur })); } catch (e) {}
+}
+function getSaves() { try { return JSON.parse(localStorage.getItem(LS_SAVES)) || {}; } catch (e) { return {}; } }
+function putSaves(s) { localStorage.setItem(LS_SAVES, JSON.stringify(s)); }
+function renderSaves(select) {
+  const s = getSaves(), sel = $('saveList');
+  const names = Object.keys(s).sort((a, b) => s[b].savedAt - s[a].savedAt);
+  sel.innerHTML = names.length ? '' : '<option value="">저장된 작전 없음</option>';
+  for (const n of names) {
+    const o = document.createElement('option');
+    const d = new Date(s[n].savedAt);
+    o.value = n;
+    o.textContent = `${n} (${s[n].project.frames.length}장면 · ${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')})`;
+    sel.appendChild(o);
+  }
+  if (select) sel.value = select;
+  $('loadBtn').disabled = $('delSaveBtn').disabled = !names.length;
+}
+function saveProject() {
+  const name = $('projName').value.trim() || '작전';
+  project.name = name;
+  const s = getSaves();
+  if (s[name] && !confirm(`"${name}" 작전을 덮어쓸까요?`)) return;
+  s[name] = { project: clone(project), stage: clone(stage), cur, savedAt: Date.now() };
+  try { putSaves(s); } catch (e) { alert('저장 공간이 부족합니다. 파일로 내보내기를 이용하세요.'); return; }
+  renderSaves(name); autosave();
+  toast(`"${name}" 저장 완료`);
+}
+function loadProject() {
+  const name = $('saveList').value, s = getSaves()[name];
+  if (!s) return;
+  if (playing) stopPlay();
+  pushHistory();
+  project = normalize(s.project);
+  cur = Math.min(s.cur ?? -1, project.frames.length - 1);
+  stage = cur >= 0 ? clone(project.frames[cur].pos) : (s.stage || defaultPos(project.mode));
+  refreshAll();
+  toast(`"${name}" 불러옴`);
+}
+function deleteSave() {
+  const name = $('saveList').value;
+  if (!name || !confirm(`"${name}" 작전을 삭제할까요?`)) return;
+  const s = getSaves(); delete s[name]; putSaves(s); renderSaves();
+  toast('삭제됨');
+}
+function exportProject() {
+  const blob = new Blob([JSON.stringify({ app: 'tennis-tactics-board', version: 1, project }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  download(url, `${safeName(project.name)}.json`);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function importProject(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if (playing) stopPlay();
+      pushHistory();
+      project = normalize(data.project || data);
+      cur = project.frames.length ? 0 : -1;
+      stage = cur >= 0 ? clone(project.frames[0].pos) : defaultPos(project.mode);
+      refreshAll();
+      toast(`"${project.name}" 가져옴`);
+    } catch (e) { alert('올바른 작전 파일이 아닙니다.'); }
+  };
+  r.readAsText(file);
+}
+function newProj() {
+  if (F().length && !confirm('새 작전을 시작할까요? (현재 작업은 실행 취소로 되돌릴 수 있습니다)')) return;
+  if (playing) stopPlay();
+  pushHistory();
+  project = newProject(); stage = defaultPos(project.mode); cur = -1;
+  refreshAll();
+}
+
+// ---------- 토스트 / 크기 ----------
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+function fit() {
+  const r = $('stage').getBoundingClientRect();
+  const k = Math.min((r.width - 32) / W, (r.height - 32) / H);
+  canvas.style.width = W * k + 'px'; canvas.style.height = H * k + 'px';
+}
+
+// ---------- 포인터(드래그) ----------
+function toCanvas(e) {
+  const r = canvas.getBoundingClientRect();
+  return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height];
+}
+function hitTest(sx, sy) {
+  const [bx, by, k] = proj(stage.ball[0], stage.ball[1], contactZ(editStroke()));
+  if (Math.hypot(sx - bx, sy - by) <= Math.max(16, 0.13 * k + 9)) return 'ball';
+  const ids = [...visibleIds()].sort((a, b) => stage[b][1] - stage[a][1]);   // 앞(가까운) 선수부터
+  for (const id of ids) {
+    const [x0, y0, x1, y1] = figureBox(stage[id]);
+    if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) return id;
+  }
+  return null;
+}
+canvas.addEventListener('pointerdown', e => {
+  if (playing) return;
+  const [sx, sy] = toCanvas(e), hit = hitTest(sx, sy), g = screenToGround(sx, sy);
+  if (!hit || !g) return;
+  drag = { id: hit, dx: stage[hit][0] - g[0], dy: stage[hit][1] - g[1], before: snap(), start: [...stage[hit]] };
+  canvas.setPointerCapture(e.pointerId);
+  canvas.style.cursor = 'grabbing';
+});
+canvas.addEventListener('pointermove', e => {
+  const [sx, sy] = toCanvas(e);
+  if (drag) {
+    const g = screenToGround(sx, sy);
+    if (!g) return;
+    stage[drag.id] = [Math.max(-LIM.x, Math.min(LIM.x, g[0] + drag.dx)), Math.max(-LIM.y, Math.min(LIM.y, g[1] + drag.dy))];
+  } else if (!playing) canvas.style.cursor = hitTest(sx, sy) ? 'grab' : 'default';
+});
+function endDrag() {
+  if (!drag) return;
+  if (dist(drag.start, stage[drag.id]) > 0.001) { history.push(drag.before); if (history.length > 150) history.shift(); future = []; }
+  drag = null; canvas.style.cursor = 'grab';
+  renderStatus(); autosave();
+}
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+// ---------- 키보드 ----------
+window.addEventListener('keydown', e => {
+  const t = e.target;
+  const typing = t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
+    (t.tagName === 'INPUT' && !['checkbox', 'range', 'radio', 'button', 'file'].includes(t.type));
+  if (typing) { if (e.key === 'Escape') t.blur(); return; }
+  if ($('modal').classList.contains('open')) { if (e.key === 'Escape') closeVideo(); return; }
+  if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) addFrame(); return; }
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); redo(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  switch (e.key) {
+    case 'Enter': e.preventDefault(); togglePlay(); break;
+    case 'Escape': stopPlay(); break;
+    case 'ArrowLeft': e.preventDefault(); selectFrame(Math.max(0, cur - 1)); break;
+    case 'ArrowRight': e.preventDefault(); selectFrame(Math.min(F().length - 1, cur + 1)); break;
+    case 'Delete': deleteFrame(); break;
+    case 'u': case 'U': overwriteFrame(); break;
+    case 'r': case 'R': record(); break;
+  }
+});
+// 버튼/체크박스에 포커스가 남아 Space가 클릭으로 처리되는 것 방지
+document.addEventListener('click', e => {
+  const b = e.target.closest('button, input[type=checkbox]');
+  if (b) b.blur();
+});
+
+// ---------- 바인딩 ----------
+function bind() {
+  const names = $('names');
+  IDS.forEach(id => {
+    const d = document.createElement('div');
+    d.innerHTML = `<span class="sw" style="background:${TEAM[id[0]].fill}"></span><input type="text" id="name-${id}" maxlength="6" placeholder="${id}">`;
+    names.appendChild(d);
+    d.querySelector('input').addEventListener('input', e => { project.names[id] = e.target.value || id; autosave(); });
+  });
+  ARCS.forEach((a, i) => $('arc').insertAdjacentHTML('beforeend', `<option value="${i}">${a.name}</option>`));
+
+  document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => {
+    if (project.mode === b.dataset.v) return;
+    pushHistory(); project.mode = b.dataset.v; refreshAll();
+  });
+  $('surface').onchange = e => { project.surface = e.target.value; refreshAll(); e.target.blur(); };
+  $('showPaths').onchange = e => { showPaths = e.target.checked; };
+  $('resetBtn').onclick = () => { if (playing) return; pushHistory(); stage = defaultPos(project.mode); refreshAll(); };
+  $('addBtn').onclick = addFrame;
+  $('overBtn').onclick = overwriteFrame;
+  $('delBtn').onclick = () => deleteFrame();
+  $('undoBtn').onclick = undo;
+  $('redoBtn').onclick = redo;
+  $('memo').addEventListener('input', e => {
+    if (!F()[cur]) return;
+    F()[cur].memo = e.target.value;
+    const m = document.querySelector('.fitem.sel .memo');
+    if (m) { m.textContent = e.target.value || '메모 없음'; m.classList.toggle('empty', !e.target.value); }
+    autosave();
+  });
+  $('dur').addEventListener('change', e => {
+    if (!F()[cur]) return;
+    F()[cur].dur = Math.min(10, Math.max(0.1, +e.target.value || 1));
+    refreshAll();
+  });
+  $('arc').addEventListener('change', e => {
+    if (!F()[cur]) return;
+    F()[cur].arc = +e.target.value; refreshAll(); e.target.blur();
+  });
+  $('playBtn').onclick = togglePlay;
+  $('speed').addEventListener('input', e => { speed = +e.target.value; $('speedVal').textContent = speed.toFixed(2).replace(/0$/, '') + 'x'; });
+  $('speed').addEventListener('change', e => e.target.blur());
+  $('recBtn').onclick = record;
+  $('viewBtn').onclick = openVideo;
+  $('closeModal').onclick = closeVideo;
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeVideo(); });
+  $('projName').addEventListener('input', e => { project.name = e.target.value; autosave(); });
+  $('saveBtn').onclick = saveProject;
+  $('loadBtn').onclick = loadProject;
+  $('delSaveBtn').onclick = deleteSave;
+  $('exportBtn').onclick = exportProject;
+  $('importBtn').onclick = () => $('importFile').click();
+  $('importFile').onchange = e => { if (e.target.files[0]) importProject(e.target.files[0]); e.target.value = ''; };
+  window.addEventListener('resize', fit);
+}
+
+// ---------- 메인 루프 ----------
+let lastNow = performance.now();
+function loop(now) {
+  const dt = Math.min(0.1, Math.max(0, (now - lastNow) / 1000));
+  lastNow = now;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const poses = {};
+  if (playing) {
+    const st = evalPlay(now);
+    updateAnim(st.pos, dt);
+    for (const id of visibleIds()) {
+      const p = basePose(id), sw = swingAt(id, st.t);
+      if (sw) applySwing(p, sw.ev, sw.p);
+      poses[id] = p;
+    }
+    const [bx, by] = proj(st.pos.ball[0], st.pos.ball[1], st.z);
+    playing.trail.push([bx, by]);
+    if (playing.trail.length > 22) playing.trail.shift();
+    drawScene(ctx, st.pos, {
+      z: st.z, poses, paths: showPaths, info: playing.info, trail: playing.trail,
+      caption: [`${st.idx + 1} / ${F().length}`, F()[st.idx].memo],
+    });
+    $('progress').style.width = (st.prog * 100) + '%';
+    if (st.done) finishPlay();
+  } else {
+    updateAnim(stage, dt);
+    const es = editStroke();
+    for (const id of visibleIds()) {
+      const p = basePose(id);
+      if (es && es.pid === id) applySwing(p, es, 0.6);   // 타구 자세 미리보기
+      poses[id] = p;
+    }
+    const g = cur >= 0 && F()[cur] ? F()[cur].pos : null;
+    drawScene(ctx, stage, {
+      z: contactZ(es), poses, paths: showPaths, caption: editCaption(),
+      ghost: g, ghostZ: g ? contactZ(strokeFor(g, cur === 0, F()[cur].arc)) : 0,
+    });
+  }
+  requestAnimationFrame(loop);
+}
+
+// ---------- 시작 ----------
+(function init() {
+  try {
+    const a = JSON.parse(localStorage.getItem(LS_AUTO));
+    if (a && a.project) {
+      project = normalize(a.project);
+      cur = Math.min(typeof a.cur === 'number' ? a.cur : -1, project.frames.length - 1);
+      const def = defaultPos(project.mode);
+      stage = Object.fromEntries([...IDS, 'ball'].map(id => [id, Array.isArray(a.stage?.[id]) ? a.stage[id] : def[id]]));
+    }
+  } catch (e) {}
+  setupCamera(); bind(); fit(); renderSaves(); refreshAll(); updatePlayUI();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
